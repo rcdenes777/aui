@@ -285,11 +285,44 @@ format_partitions() {
 
   # partitions based on boot system
   if [[ $UEFI -eq 1 ]]; then
-    partition_name=("root" "EFI" "swap" "another")
+    partition_filesytem=( "DEFAULT" "BTRFS_SUBVOLUME")
+    PS3="$prompt1"
+    echo -e "Select partition scheme:"
+    select OPT in "${partition_filesytem[@]}"; do
+    partition_filesytem=$OPT
+    case "$REPLY" in
+      1)
+        partition_name=( "EFI" "root" "swap" "another")
+       ;;
+      2)
+        partition_name=("EFI" "subvolume_BTRfs" "swap_file_btrfs" )
+       ;;
+      *)
+        invalid_option
+        ;;
+    esac
+    [[ -n $OPT ]] && break
+  done
   else
-    partition_name=("root" "swap" "another")
+    partition_filesytem=( "DEFAULT" "BTRFS_SUBVOLUME")
+    PS3="$prompt1"
+    echo -e "Select partition scheme:"
+    select OPT in "${partition_filesytem[@]}"; do
+    partition_filesytem=$OPT
+    case "$REPLY" in
+      1)
+        partition_name=( "root" "swap" "another")
+       ;;
+      2)
+        partition_name=( "subvolume_BTRfs" "swap_file_btrfs" )
+       ;;
+      *)
+        invalid_option
+        ;;
+    esac
+    [[ -n $OPT ]] && break
+  done
   fi
-
   select_filesystem() {
     filesystems_list=("btrfs" "ext2" "ext3" "ext4" "f2fs" "jfs" "nilfs2" "ntfs" "reiserfs" "vfat" "xfs")
     PS3="$prompt1"
