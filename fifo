@@ -295,7 +295,7 @@ format_partitions() {
         partition_name=( "EFI" "root" "swap" "another")
        ;;
       2)
-        partition_name=("EFI" "subvolume_BTRfs" "swap_file_btrfs" )
+        partition_name=("EFI" "subvolume_BTRfs")
        ;;
       *)
         invalid_option
@@ -314,7 +314,7 @@ format_partitions() {
         partition_name=( "root" "swap" "another")
        ;;
       2)
-        partition_name=( "subvolume_BTRfs" "swap_file_btrfs" )
+        partition_name=( "subvolume_BTRfs")
        ;;
       *)
         invalid_option
