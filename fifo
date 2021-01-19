@@ -107,6 +107,7 @@ configure_mirrorlist() {
   $EDITOR /etc/pacman.d/mirrorlist
 }
 #}}}
+
 #UMOUNT PARTITIONS {{{
 umount_partitions() {
   mounted_partitions=($(lsblk | grep "${MOUNTPOINT}" | awk '{print $7}' | sort -r))
@@ -138,38 +139,38 @@ select_device() {
 create_partition_scheme() {
   LUKS=0
   LVM=0
-  print_title "https://wiki.archlinux.org/index.php/Partitioning"
-  print_info "Partitioning a hard drive allows one to logically divide the available space into sections that can be accessed independently of one another."
-  print_warning "Maintain Current does not work with LUKS"
-  partition_layouts=("Default" "LVM" "LVM+LUKS" "Maintain Current")
-  PS3="$prompt1"
-  echo -e "Select partition scheme:"
-  select OPT in "${partition_layouts[@]}"; do
-    partition_layout=$OPT
-    case "$REPLY" in
-    1)
+  #print_title "https://wiki.archlinux.org/index.php/Partitioning"
+  #print_info "Partitioning a hard drive allows one to logically divide the available space into sections that can be accessed independently of one another."
+  #print_warning "Maintain Current does not work with LUKS"
+  #partition_layouts=("Default" "LVM" "LVM+LUKS" "Maintain Current")
+  #PS3="$prompt1"
+  #echo -e "Select partition scheme:"
+  #select OPT in "${partition_layouts[@]}"; do
+  #  partition_layout=$OPT
+  #  case "$REPLY" in
+  #  1)
       create_partition
-      ;;
-    2)
-      create_partition
-      setup_lvm
-      ;;
-    3)
-      create_partition
-      setup_luks
-      setup_lvm
-      ;;
-    4)
-      modprobe dm-mod
-      vgscan &>/dev/null
-      vgchange -ay &>/dev/null
-      ;;
-    *)
-      invalid_option
-      ;;
-    esac
-    [[ -n $OPT ]] && break
-  done
+  #    ;;
+  #  2)
+  #    create_partition
+  #    setup_lvm
+  #    ;;
+  #  3)
+  #    create_partition
+  #    setup_luks
+  #    setup_lvm
+  #    ;;
+  #  4)
+  #    modprobe dm-mod
+  #    vgscan &>/dev/null
+  #    vgchange -ay &>/dev/null
+  #    ;;
+  #  *)
+  #    invalid_option
+  #    ;;
+  #  esac
+  #  [[ -n $OPT ]] && break
+  #done
 }
 #}}}
 #SETUP PARTITION{{{
@@ -569,10 +570,8 @@ select_linux_version() {
       elif [ "linux-zen (tuned kernel)" == "$VERSION" ]; then
         pacstrap "${MOUNTPOINT}" base linux-zen linux-zen-headers
       fi
-      pacstrap "${MOUNTPOINT}" \
-        cryptsetup lvm2 netctl dhcpcd inetutils jfsutils diffutils e2fsprogs \
-        less linux-firmware logrotate man-db man-pages mdadm nano \
-        perl reiserfsprogs s-nail sysfsutils texinfo usbutils vi which xfsprogs
+      pacstrap "${MOUNTPOINT}" linux-firmware nano bash-completion usbutils
+      
       break
     else
       invalid_option
@@ -587,22 +586,23 @@ install_base_system() {
   rm "${MOUNTPOINT}""${EFI_MOUNTPOINT}"/vmlinuz-linux
   select_linux_version
   pacstrap "${MOUNTPOINT}" base-devel parted btrfs-progs f2fs-tools net-tools
-  [[ $? -ne 0 ]] && error_msg "Installing base system to ${MOUNTPOINT} failed. Check error messages above."
-  local PTABLE=$(parted -sl | grep "gpt")
-  [[ -n $PTABLE ]] && pacstrap "${MOUNTPOINT}" gptfdisk
-  WIRELESS_DEV=$(ip link | grep wl | awk '{print $2}' | sed 's/://' | sed '1!d')
-  if [[ -n $WIRELESS_DEV ]]; then
-    pacstrap "${MOUNTPOINT}" iw wireless_tools wpa_supplicant dialog
-  else
-    WIRED_DEV=$(ip link | grep "ens\|eno\|enp" | awk '{print $2}' | sed 's/://' | sed '1!d')
-    if [[ -n $WIRED_DEV ]]; then
-      arch_chroot "systemctl enable dhcpcd@${WIRED_DEV}.service"
-    fi
-  fi
-  if is_package_installed "espeakup"; then
-    pacstrap "${MOUNTPOINT}" alsa-utils espeakup brltty
-    arch_chroot "systemctl enable espeakup.service"
-  fi
+  
+  print_title "INSTALL MICROCODE AMD OR INTEL"
+  microcode_list=('INTEL' 'AMD')
+  PS3="$prompt1"
+  select OPT in "${microcode_list[@]}"; do
+    case "$REPLY" in
+    1)
+      pacstrap "${MOUNTPOINT}" intel-ucode
+      ;;
+    2)
+      pacstrap "${MOUNTPOINT}" amd-ucode
+      ;;
+    *) invalid_option ;;
+    esac
+    [[ -n $OPT ]] && break
+  done
+  microcode_list=$OPT
 }
 #}}}
 #CONFIGURE KEYMAP {{{
@@ -622,49 +622,34 @@ configure_fstab() {
     cp "${MOUNTPOINT}"/etc/fstab.aui "${MOUNTPOINT}"/etc/fstab
   fi
   if [[ $UEFI -eq 1 ]]; then
-    fstab_list=("DEV" "PARTUUID" "LABEL")
+    genfstab -t PARTUUID -p "${MOUNTPOINT}" >>"${MOUNTPOINT}"/etc/fstab
   else
-    fstab_list=("DEV" "UUID" "LABEL")
+    genfstab -U -p "${MOUNTPOINT}" >>"${MOUNTPOINT}"/etc/fstab
   fi
-
-  PS3="$prompt1"
-  echo -e "Configure fstab based on:"
-  select OPT in "${fstab_list[@]}"; do
-    case "$REPLY" in
-    1) genfstab -p "${MOUNTPOINT}" >>"${MOUNTPOINT}"/etc/fstab ;;
-    2)
-      if [[ $UEFI -eq 1 ]]; then
-        genfstab -t PARTUUID -p "${MOUNTPOINT}" >>"${MOUNTPOINT}"/etc/fstab
-      else
-        genfstab -U -p "${MOUNTPOINT}" >>"${MOUNTPOINT}"/etc/fstab
-      fi
-      ;;
-    3) genfstab -L -p "${MOUNTPOINT}" >>"${MOUNTPOINT}"/etc/fstab ;;
-    *) invalid_option ;;
-    esac
-    [[ -n $OPT ]] && break
-  done
-  fstab=$OPT
   echo "Review your fstab"
   [[ -f ${MOUNTPOINT}/swapfile ]] && sed -i "s/\\${MOUNTPOINT}//" "${MOUNTPOINT}"/etc/fstab
   pause_function
   $EDITOR "${MOUNTPOINT}"/etc/fstab
 }
 #}}}
+
 #CONFIGURE HOSTNAME {{{
 configure_hostname() {
   print_title "HOSTNAME - https://wiki.archlinux.org/index.php/HOSTNAME"
   print_info "A host name is a unique name created to identify a machine on a network.Host names are restricted to alphanumeric characters.\nThe hyphen (-) can be used, but a host name cannot start or end with it. Length is restricted to 63 characters."
   printf "%s" "Hostname [ex: archlinux]: " 
   read -r host_name
-  echo "$host_name" >"${MOUNTPOINT}"/etc/hostname
+  echo "$host_name" >> "${MOUNTPOINT}"/etc/hostname
   if [[ ! -f ${MOUNTPOINT}/etc/hosts.aui ]]; then
     cp "${MOUNTPOINT}"/etc/hosts "${MOUNTPOINT}"/etc/hosts.aui
   else
     cp "${MOUNTPOINT}"/etc/hosts.aui "${MOUNTPOINT}"/etc/hosts
   fi
-  arch_chroot "sed -i '/127.0.0.1/s/$/ '${host_name}'/' /etc/hosts"
-  arch_chroot "sed -i '/::1/s/$/ '${host_name}'/' /etc/hosts"
+  echo "127.0.0.1 	localhost" >> "${MOUNTPOINT}"/etc/host
+  echo "::1		    localhost"  >> "${MOUNTPOINT}"/etc/host
+ echo "127.0.1.1    "$host_name".localdomain  "$host_name"" >> "${MOUNTPOINT}"/etc/host
+#  arch_chroot "sed -i '/127.0.0.1/s/$/ '${host_name}'/' /etc/hosts"
+#  arch_chroot "sed -i '/::1/s/$/ '${host_name}'/' /etc/hosts"
 }
 #}}}
 #CONFIGURE TIMEZONE {{{
@@ -713,10 +698,12 @@ configure_locale() {
     setlocale
     read_input_text "Confirm locale ($LOCALE)"
   done
-  echo 'LANG="'"$LOCALE_UTF8"'"' >"${MOUNTPOINT}"/etc/locale.conf
+  echo 'LANG="'"$LOCALE_UTF8"'"' > "${MOUNTPOINT}"/etc/locale.conf
+  #echo "KEYMAP=""$KEYMAP" > "${MOUNTPOINT}"/etc/vconsole.conf
   arch_chroot "sed -i 's/#\('${LOCALE_UTF8}'\)/\1/' /etc/locale.gen"
   arch_chroot "locale-gen"
-}
+  configure_keymap
+  }
 #}}}
 #CONFIGURE MKINITCPIO {{{
 configure_mkinitcpio() {
@@ -945,6 +932,21 @@ root_password() {
   pause_function
 }
 #}}}
+#Adicionar novo usuario {{{
+new_user() {
+  print_title "ADD NEW USER"
+  printf "%s" "Digite o nome do novo Usuario: " 
+   printf "%s" "O nome dever ser tudo em letras minusculas: [seunome] " 
+  read -r name_user
+  print_warning "Enter your new root password"
+  arch_chroot "useradd -m -g users -G wheel,storage,power,lp,sys,network,video -s /bin/bash "$name_user}""
+  print_warning "Enter your new USER password"
+  arch_chroot "passwd "${USUARIO}""
+  printf "%s" "Liberar sudo ao Grupo  whell." 
+  sed -i '/%wheel ALL=(ALL) ALL/s/^#//'" ${MOUNTPOINT}"/etc/sudoers
+  pause_function
+}
+#}}}
 #FINISH {{{
 finish() {
   print_title "INSTALL COMPLETED"
@@ -980,6 +982,7 @@ while true; do
   echo "11) $(mainmenu_item "${checklist[11]}" "Configure Mkinitcpio")"
   echo "12) $(mainmenu_item "${checklist[12]}" "Install Bootloader" "${bootloader}")"
   echo "13) $(mainmenu_item "${checklist[13]}" "Root Password")"
+  echo "14) $(mainmenu_item "${checklist[13]}" "Add new USER")"
   echo ""
   echo " d) Done"
   echo ""
@@ -1042,6 +1045,10 @@ while true; do
       root_password
       checklist[13]=1
       ;;
+    14)
+      new_user
+      checklist[14]=1
+      ;;  
     "d")
       finish
       ;;
