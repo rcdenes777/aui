@@ -429,6 +429,64 @@ format_partitions() {
       fi
     done
   }
+  
+  btrfs_format_creat_mount() {
+    elif [[ $TRIM -eq 1 ]]; then
+        read_input_text "Confirm format $1 partition"
+        if [[ $OPTION == y ]]; then
+        mkfs.btrfs -f  "${ROOT_MOUNTPOINT}"
+        mount "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"
+        btrfs subvolume create "${MOUNTPOINT}"/@
+        btrfs subvolume create "${MOUNTPOINT}"/@home
+        btrfs subvolume create "${MOUNTPOINT}"/@var
+        btrfs subvolume create "${MOUNTPOINT}"/@.snapshots
+        btrfs subvolume create "${MOUNTPOINT}"/@swap
+        umount "${MOUNTPOINT}"
+        mount -o noatime,autodefrag,ssd,ssd_spread,compress=zstd,space_cache,subvol=@ "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"
+        mkdir -p "${MOUNTPOINT}"/{home,var,.snapshots,swap}
+        mount -o noatime,autodefrag,ssd,ssd_spread,compress=zstd,space_cache,subvol=@home "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/home
+        mount -o noatime,autodefrag,ssd,ssd_spread,compress=zstd,space_cache,subvol=@var "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/var
+        mount -o noatime,autodefrag,ssd,ssd_spread,compress=zstd,space_cache,subvol=@snapshots "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/.snapshots
+                
+        read_input_text "Confirm create Swapfile"
+        if [[ $OPTION == y ]]; then
+        mount -o defaults,noatime,,ssd,ssd_spread,subvol=@swap "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/swap
+        touch "${MOUNTPOINT}"/swap/swapfile
+        chmod 600 "${MOUNTPOINT}"/swap/swapfile
+        chattr +C "${MOUNTPOINT}"/swap/swapfile
+        fallocate "${MOUNTPOINT}"/swap/swapfile -l4G
+        mkswap "${MOUNTPOINT}"/swap/swapfile
+        swapon "${MOUNTPOINT}"/swap/swapfile
+        fi
+    fi    
+                  
+    else
+        mkfs.btrfs -f  "${ROOT_MOUNTPOINT}"
+        mount "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"
+        btrfs subvolume create "${MOUNTPOINT}"/@
+        btrfs subvolume create "${MOUNTPOINT}"/@home
+        btrfs subvolume create "${MOUNTPOINT}"/@var
+        btrfs subvolume create "${MOUNTPOINT}"/@.snapshots
+        btrfs subvolume create "${MOUNTPOINT}"/@swap
+        umount "${MOUNTPOINT}"
+        mount -o noatime,autodefrag,nossdcompress=zstd,space_cache,subvol=@ "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"
+        mkdir -p "${MOUNTPOINT}"/{home,var,.snapshots,swap}
+        mount -o noatime,autodefrag,nossd,compress=zstd,space_cache,subvol=@home "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/home
+        mount -o noatime,autodefrag,nossd,compress=zstd,space_cache,subvol=@var "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/var
+        mount -o noatime,autodefrag,nossd,compress=zstd,space_cache,subvol=@snapshots "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/.snapshots
+            
+        read_input_text "Confirm create Swapfile"
+        if [[ $OPTION == y ]]; then
+        mount -o defaults,noatime,subvol=@swap "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/swap
+        touch "${MOUNTPOINT}"/swap/swapfile
+        chmod 600 "${MOUNTPOINT}"/swap/swapfile
+        chattr +C "${MOUNTPOINT}"/swap/swapfile
+        fallocate "${MOUNTPOINT}"/swap/swapfile -l4G
+        mkswap "${MOUNTPOINT}"/swap/swapfile
+        swapon "${MOUNTPOINT}"/swap/swapfile
+        fi
+    fi     
+  }
 
   while true; do
     PS3="$prompt1"
@@ -446,6 +504,12 @@ format_partitions() {
             ROOT_MOUNTPOINT=${partition}
             format_partition "${partition}" "${MOUNTPOINT}"
             ;;
+          subvolume_BTRfs)
+            ROOT_PART=$(echo "${partition}" | sed 's/\/dev\/mapper\///' | sed 's/\/dev\///')
+            ROOT_MOUNTPOINT=${partition}
+            btrfs_format_creat_mount
+            disable_partition
+            ;;  
           EFI)
             set_efi_partition
             read_input_text "Format ${partition} partition"
