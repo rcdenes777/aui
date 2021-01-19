@@ -1,6 +1,6 @@
 #!/bin/bash
 # FIX THIS ISSUES | NON-ACUTE
-#shellcheck disable=SC1091,SC2001,SC2015,SC2153,SC2154,SC2155,SC2181,SC2207
+#shellcheck disable=SC1091,SC2001,SC2015,SC2153,SC2154,SC2155,SC2181,SC2207,SC1073
 
 
 : 'ATTENTION!:
@@ -431,7 +431,7 @@ format_partitions() {
   }
   
   btrfs_format_creat_mount() {
-    elif [[ $TRIM -eq 1 ]]; then
+    if [[ $TRIM -eq 1 ]]; then
         read_input_text "Confirm format $1 partition"
         if [[ $OPTION == y ]]; then
         mkfs.btrfs -f  "${ROOT_MOUNTPOINT}"
@@ -455,8 +455,6 @@ format_partitions() {
         chmod 600 "${MOUNTPOINT}"/swap/swapfile
         chattr +C "${MOUNTPOINT}"/swap/swapfile
         fallocate "${MOUNTPOINT}"/swap/swapfile -l4G
-        mkswap "${MOUNTPOINT}"/swap/swapfile
-        swapon "${MOUNTPOINT}"/swap/swapfile
         fi
     fi    
                   
@@ -482,8 +480,6 @@ format_partitions() {
         chmod 600 "${MOUNTPOINT}"/swap/swapfile
         chattr +C "${MOUNTPOINT}"/swap/swapfile
         fallocate "${MOUNTPOINT}"/swap/swapfile -l4G
-        mkswap "${MOUNTPOINT}"/swap/swapfile
-        swapon "${MOUNTPOINT}"/swap/swapfile
         fi
     fi     
   }
