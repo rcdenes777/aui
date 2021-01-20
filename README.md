@@ -14,6 +14,7 @@ This project is not actively developed but *will* accept Pull Requests.
   <img src="https://img.shields.io/github/forks/helmuthdu/aui?color=teal&style=for-the-badge">
 </p>
 
+
 ## Notas
 ATENÇAO >>> SOMENTE PARA TESTES 
 
@@ -44,6 +45,16 @@ Mude para executavel:
 
 Execute o script
 #./fifo.sh
+
+## Pacotes Instalado com o SCRIPT fifo:
+- base linux linux-headers
+- linux-firmware nano bash-completion usbutils
+- base-devel parted btrfs-progs f2fs-tools net-tools
+- intel-ucode ou adm-ucode
+- grub os-prober grub-btrfs snapper grub-customizer grub-theme-vimix
+- refind-efi os-prober
+- efibootmgr dosfstools
+
 
 ## Features
 ### FIFO SCRIPT
