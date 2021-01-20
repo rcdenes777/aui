@@ -25,18 +25,18 @@ ATENÇAO >>> SOMENTE PARA TESTES
 - lilo AINDA NAO TRABALHADO E NAO TESTADO
 ********************************************************************
 
-## Prerequisites
+## Prerequitos
 
 - Uma internet ativa
 - Logado como root
 
-## Obtaining The Repository
-### With git
+## Instale o Git
+### Clone script
 - Obtenha a lista de pacotes e instale git: `pacman -Sy git`
 - Obtenha o script: `git clone git://github.com/rcdenes777/aui `
  
 
-## How to use
+## Para usar
 Entre na pasta aui:
 #cd aui
 
@@ -54,6 +54,23 @@ Execute o script
 - grub os-prober grub-btrfs snapper grub-customizer grub-theme-vimix
 - refind-efi os-prober
 - efibootmgr dosfstools
+
+### Partiçao Btrfs
+## Detecta automanticamente se é SSD ou HD mecânico:
+## Sera criados os subvoluves:
+- btrfs subvolume create "${MOUNTPOINT}"/@
+- btrfs subvolume create "${MOUNTPOINT}"/@home
+- btrfs subvolume create "${MOUNTPOINT}"/@var
+- btrfs subvolume create "${MOUNTPOINT}"/@.snapshots
+- btrfs subvolume create "${MOUNTPOINT}"/@swap
+## Se for SSD recebera as flags:
+- mount -o noatime,autodefrag,ssd,ssd_spread,compress=zstd,space_cache,subvol=
+## Se for HD mecânico recebera as flags:
+- mount -o noatime,autodefrag,nossd,compress=zstd,space_cache,subvol=
+## Sera perguntado se quer criar um Swap_File se sim, perguntara o tamanho em Giga e recebera as flags:
+- mount -o defaults,noatime,,ssd,ssd_spread,subvol=@swap
+- Ou...
+- mount -o defaults,noatime,nossd,subvol=@swap
 
 
 ## Features
