@@ -856,22 +856,6 @@ root_password() {
   arch_chroot "passwd"
   pause_function
 }
-#}}}
-#Adicionar novo usuario {{{
-new_user() {
-  print_title "ADD NEW USER"
-  printf "%s" "Digite o nome do novo Usuario: " 
-   printf "%s" "O nome dever ser tudo em letras minusculas: [seunome] " 
-  read -r name_user
-  print_warning "Enter your new root password"
-  arch_chroot "useradd -m -g users -G wheel,storage,power,lp,sys,network,video -s /bin/bash "$name_user}""
-  print_warning "Enter your new USER password"
-  arch_chroot "passwd "${USUARIO}""
-  printf "%s" "Liberar sudo ao Grupo  whell." 
-  sed -i '/%wheel ALL=(ALL) ALL/s/^#//'" ${MOUNTPOINT}"/etc/sudoers
-  pause_function
-}
-#}}}
 #SET PACAM COLOR {{{
 set_pacman_color() {
     sed -i "/\[multilib\]/,/Include/"'s/^#//' "${MOUNTPOINT}"/etc/pacman.conf
@@ -885,7 +869,8 @@ set_pacman_color() {
 finish() {
   print_title "INSTALL COMPLETED"
   #COPY AUI TO ROOT FOLDER IN THE NEW SYSTEM
-  print_warning "\nA copy of the AUI will be placed in /root directory of your new system"
+  print_warning "\nA copy of the AUI will be placed in /root directory of your new system. 
+  \nReinicio o computador, faça o loguim diginatando root e em seguida a senha! "
   cp -R "$(pwd)" "${MOUNTPOINT}"/root
   read_input_text "Reboot system"
   if [[ $OPTION == y ]]; then
@@ -934,8 +919,7 @@ while true; do
   echo "11) $(mainmenu_item "${checklist[11]}" "Configure Mkinitcpio")"
   echo "12) $(mainmenu_item "${checklist[12]}" "Install Bootloader" "${bootloader}")"
   echo "13) $(mainmenu_item "${checklist[13]}" "Root Password")"
-  echo "14) $(mainmenu_item "${checklist[14]}" "Add new USER")"
-  echo "15) $(mainmenu_item "${checklist[15]}" "Set color Pacman")"
+  echo "14) $(mainmenu_item "${checklist[14]}" "Set color Pacman")"
   echo ""
   echo " d) Done"
   echo ""
@@ -999,12 +983,8 @@ while true; do
       checklist[13]=1
       ;;
     14)
-      new_user
-      checklist[14]=1
-      ;;  
-    15)
       set_pacman_color
-      checklist[15]=1
+      checklist[14]=1
       ;;    
     "d")
       finish
