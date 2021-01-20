@@ -1,0 +1,39 @@
+Instuções para executar o script Archlinux Ultimate Installer 
+
+ATENÇAO >>> SOMENTE PARA TESTES 
+
+********************************************************************
+
+NAO USE EM HD COM CONTEUDOS IMPORTANTES.
+
+NAO DEIXE MAIS NENHUM OUTRO HD CONECTADO 
+
+PREFERENCIA TESTAR EM MAQUINA VIRTUAL
+
+********************************************************************
+
+Lista de pacotes que sao Instalados
+
+base linux linux-headers
+linux-firmware nano bash-completion usbutils
+base-devel parted btrfs-progs f2fs-tools net-tools
+intel-ucode ou amd-ucode
+grub os-prober grub-btrfs snapper grub-customizer grub-theme-vimix
+refind-efi os-prober
+efibootmgr dosfstools
+********************************************************************
+
+De boot na iso do Archlinux
+
+Obtenha a lista de pacotes e instale git: pacman -Sy git
+
+Obtenha o script: git clone git://github.com/rcdenes777/aui
+
+Entre na pasta aui:
+#cd aui
+
+Mude para executavel:
+#chmod +x fifo.sh
+
+Execute o script
+#./fifo.sh
