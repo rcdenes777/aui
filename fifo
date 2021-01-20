@@ -463,7 +463,7 @@ format_partitions() {
         if [[ $OPTION == y ]]; then
         printf "%s" "Digite o tamanha do Swap_file: (EX: 4), sera de 4Giga]: " 
         read -r swap_tamanho
-        mount -o defaults,noatime,,ssd,ssd_spread,subvol=@swap "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/swap
+        mount -o defaults,noatime,ssd,ssd_spread,subvol=@swap "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/swap
         touch "${MOUNTPOINT}"/swap/swapfile
         chmod 600 "${MOUNTPOINT}"/swap/swapfile
         chattr +C "${MOUNTPOINT}"/swap/swapfile
@@ -480,17 +480,17 @@ format_partitions() {
         btrfs subvolume create "${MOUNTPOINT}"/@.snapshots
         btrfs subvolume create "${MOUNTPOINT}"/@swap
         umount "${MOUNTPOINT}"
-        mount -o noatime,autodefrag,nossdcompress=zstd,space_cache,subvol=@ "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"
+        mount -o noatime,autodefrag,compress=zstd,space_cache,subvol=@ "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"
         mkdir -p "${MOUNTPOINT}"/{home,var,.snapshots,swap}
-        mount -o noatime,autodefrag,nossd,compress=zstd,space_cache,subvol=@home "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/home
-        mount -o noatime,autodefrag,nossd,compress=zstd,space_cache,subvol=@var "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/var
-        mount -o noatime,autodefrag,nossd,compress=zstd,space_cache,subvol=@snapshots "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/.snapshots
+        mount -o noatime,autodefrag,compress=zstd,space_cache,subvol=@home "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/home
+        mount -o noatime,autodefrag,compress=zstd,space_cache,subvol=@var "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/var
+        mount -o noatime,autodefrag,compress=zstd,space_cache,subvol=@snapshots "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/.snapshots
             
         read_input_text "Confirm create $1 Swapfile"
         if [[ $OPTION == y ]]; then
         printf "%s" "Digite o tamanha do Swap_file: (EX: 4), sera de 4Giga]: " 
         read -r swap_tamanho
-        mount -o defaults,noatime,,nossd,subvol=@swap "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/swap
+        mount -o defaults,noatime,subvol=@swap "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/swap
         touch "${MOUNTPOINT}"/swap/swapfile
         chmod 600 "${MOUNTPOINT}"/swap/swapfile
         chattr +C "${MOUNTPOINT}"/swap/swapfile
