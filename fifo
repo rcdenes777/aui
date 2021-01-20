@@ -32,6 +32,16 @@ else
 fi
 
 #ARCHLINUX INSTALL SCRIPTS MODE {{{
+#PACMAN COLOR {{{
+umount_partitions() {
+    sed -i "/\[multilib\]/,/Include/"'s/^#//' /etc/pacman.conf
+    sed -i "s/#Color/Color/g" /etc/pacman.conf
+    sed -i "s/#TotalDownload/TotalDownload/g" /etc/pacman.conf
+    sed -i "s/#UseSyslog/ILoveCandy/g" /etc/pacman.conf
+    sed -i "s/#VerbosePkgLists/#VerbosePkgLists\nILoveCandy/g" /etc/pacman.conf
+}
+#}}}
+
 #SELECT KEYMAP {{{
 select_keymap() {
   print_title "KEYMAP - https://wiki.archlinux.org/index.php/KEYMAP"
@@ -325,7 +335,7 @@ format_partitions() {
   done
   fi
   select_filesystem() {
-    filesystems_list=("btrfs" "ext2" "ext3" "ext4" "f2fs" "jfs" "nilfs2" "ntfs" "reiserfs" "vfat" "xfs")
+    filesystems_list=("btrfs" "ext4" "ntfs" "vfat")
     PS3="$prompt1"
     echo -e "Select filesystem:\n"
     select filesystem in "${filesystems_list[@]}"; do
@@ -350,7 +360,7 @@ format_partitions() {
     if [[ $OPTION == y ]]; then
       [[ -z $3 ]] && select_filesystem || filesystem=$3
       mkfs."${filesystem}" "$1" \
-        $([[ ${filesystem} == xfs || ${filesystem} == btrfs || ${filesystem} == reiserfs ]] && echo "-f") \
+        $([[ ${filesystem} == btrfs ]] && echo "-f") \
         $([[ ${filesystem} == vfat ]] && echo "-F32") \
         $([[ $TRIM -eq 1 && ${filesystem} == ext4 ]] && echo "-E discard")
       fsck "$1"
@@ -449,13 +459,15 @@ format_partitions() {
         mount -o noatime,autodefrag,ssd,ssd_spread,compress=zstd,space_cache,subvol=@var "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/var
         mount -o noatime,autodefrag,ssd,ssd_spread,compress=zstd,space_cache,subvol=@snapshots "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/.snapshots
                 
-        read_input_text "Confirm create Swapfile"
+        read_input_text "Confirm create $1 Swapfile"
         if [[ $OPTION == y ]]; then
+        printf "%s" "Digite o tamanha do Swap_file: (EX: 4), sera de 4Giga]: " 
+        read -r swap_tamanho
         mount -o defaults,noatime,,ssd,ssd_spread,subvol=@swap "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/swap
         touch "${MOUNTPOINT}"/swap/swapfile
         chmod 600 "${MOUNTPOINT}"/swap/swapfile
         chattr +C "${MOUNTPOINT}"/swap/swapfile
-        fallocate "${MOUNTPOINT}"/swap/swapfile -l4G
+        fallocate "${MOUNTPOINT}"/swap/swapfile -l"$swap_tamanho"G
         fi
     fi    
                   
@@ -474,13 +486,15 @@ format_partitions() {
         mount -o noatime,autodefrag,nossd,compress=zstd,space_cache,subvol=@var "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/var
         mount -o noatime,autodefrag,nossd,compress=zstd,space_cache,subvol=@snapshots "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/.snapshots
             
-        read_input_text "Confirm create Swapfile"
+        read_input_text "Confirm create $1 Swapfile"
         if [[ $OPTION == y ]]; then
-        mount -o defaults,noatime,subvol=@swap "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/swap
+        printf "%s" "Digite o tamanha do Swap_file: (EX: 4), sera de 4Giga]: " 
+        read -r swap_tamanho
+        mount -o defaults,noatime,,ssd,ssd_spread,subvol=@swap "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/swap
         touch "${MOUNTPOINT}"/swap/swapfile
         chmod 600 "${MOUNTPOINT}"/swap/swapfile
         chattr +C "${MOUNTPOINT}"/swap/swapfile
-        fallocate "${MOUNTPOINT}"/swap/swapfile -l4G
+        fallocate "${MOUNTPOINT}"/swap/swapfile -l"$swap_tamanho"G
         fi
     fi     
   }
@@ -578,6 +592,7 @@ select_linux_version() {
     fi
   done
 }
+#}}}
 install_base_system() {
   print_title "INSTALL BASE SYSTEM"
   print_info "Installing PGP keyring"
@@ -603,6 +618,8 @@ install_base_system() {
     [[ -n $OPT ]] && break
   done
   microcode_list=$OPT
+  
+  
 }
 #}}}
 #CONFIGURE KEYMAP {{{
@@ -626,8 +643,10 @@ configure_fstab() {
   else
     genfstab -U -p "${MOUNTPOINT}" >>"${MOUNTPOINT}"/etc/fstab
   fi
+
+ 
   echo "Review your fstab"
-  [[ -f ${MOUNTPOINT}/swapfile ]] && sed -i "s/\\${MOUNTPOINT}//" "${MOUNTPOINT}"/etc/fstab
+  #[[ -f ${MOUNTPOINT}/swapfile ]] && sed -i "s/\\${MOUNTPOINT}//" "${MOUNTPOINT}"/#etc/fstab
   pause_function
   $EDITOR "${MOUNTPOINT}"/etc/fstab
 }
@@ -730,27 +749,23 @@ install_bootloader() {
   print_warning "\tROOT Partition: ${ROOT_MOUNTPOINT}"
   if [[ $UEFI -eq 1 ]]; then
     print_warning "\tUEFI Mode Detected"
-    bootloaders_list=("Grub2" "Syslinux" "Systemd" "rEFInd" "Skip")
+    bootloaders_list=("Grub2" "rEFInd" "Skip")
   else
     print_warning "\tBIOS Mode Detected"
-    bootloaders_list=("Grub2" "Syslinux" "Skip")
+    bootloaders_list=("Grub2" "Skip")
   fi
   PS3="$prompt1"
   echo -e "Install bootloader:\n"
   select bootloader in "${bootloaders_list[@]}"; do
     case "$REPLY" in
     1)
-      pacstrap "${MOUNTPOINT}" grub os-prober
+      pacstrap "${MOUNTPOINT}" grub os-prober grub-btrfs snapper grub-customizer grub-theme-vimix
       break
       ;;
     2)
-      pacstrap "${MOUNTPOINT}" syslinux gptfdisk
       break
       ;;
     3)
-      break
-      ;;
-    4)
       if [[ $UEFI -eq 1 ]]; then
         pacstrap "${MOUNTPOINT}" refind-efi os-prober
         break
@@ -767,6 +782,7 @@ install_bootloader() {
     esac
   done
   [[ $UEFI -eq 1 ]] && pacstrap "${MOUNTPOINT}" efibootmgr dosfstools
+  echo  "GRUB_THEME="/usr/share/grub/themes/Vimix/theme.txt"" >> "${MOUNTPOINT}"/etc/default/grub
 }
 #}}}
 #CONFIGURE BOOTLOADER {{{
@@ -801,100 +817,6 @@ configure_bootloader() {
       esac
     done
     arch_chroot "grub-mkconfig -o /boot/grub/grub.cfg"
-    ;;
-  Syslinux)
-    print_title "SYSLINUX - https://wiki.archlinux.org/index.php/Syslinux"
-    print_info "Syslinux is a collection of boot loaders capable of booting from hard drives, CDs, and over the network via PXE. It supports the fat, ext2, ext3, ext4, and btrfs file systems."
-    syslinux_install_mode=("[MBR] Automatic" "[PARTITION] Automatic" "Manual")
-    PS3="$prompt1"
-    echo -e "Syslinux Install:\n"
-    select OPT in "${syslinux_install_mode[@]}"; do
-      case "$REPLY" in
-      1)
-        arch_chroot "syslinux-install_update -iam"
-        if [[ $LUKS -eq 1 ]]; then
-          sed -i "s/APPEND root=.*/APPEND root=\/dev\/mapper\/${ROOT_PART} cryptdevice=\/dev\/${LUKS_DISK}:crypt ro/g" "${MOUNTPOINT}""${EFI_MOUNTPOINT}"/syslinux/syslinux.cfg
-        elif [[ $LVM -eq 1 ]]; then
-          sed -i "s/sda[0-9]/\/dev\/mapper\/${ROOT_PART}/g" "${MOUNTPOINT}""${EFI_MOUNTPOINT}"/syslinux/syslinux.cfg
-        else
-          sed -i "s/sda[0-9]/${ROOT_PART}/g" "${MOUNTPOINT}""${EFI_MOUNTPOINT}"/syslinux/syslinux.cfg
-        fi
-        print_warning "The partition in question needs to be whatever you have as / (root), not /boot."
-        pause_function
-        $EDITOR "${MOUNTPOINT}""${EFI_MOUNTPOINT}"/syslinux/syslinux.cfg
-        break
-        ;;
-      2)
-        arch_chroot "syslinux-install_update -i"
-        if [[ $LUKS -eq 1 ]]; then
-          sed -i "s/APPEND root=.*/APPEND root=\/dev\/mapper\/${ROOT_PART} cryptdevice=\/dev\/${LUKS_DISK}:crypt ro/g" "${MOUNTPOINT}""${EFI_MOUNTPOINT}"/syslinux/syslinux.cfg
-        elif [[ $LVM -eq 1 ]]; then
-          sed -i "s/sda[0-9]/\/dev\/mapper\/${ROOT_PART}/g" "${MOUNTPOINT}""${EFI_MOUNTPOINT}"/syslinux/syslinux.cfg
-        else
-          sed -i "s/sda[0-9]/${ROOT_PART}/g" "${MOUNTPOINT}""${EFI_MOUNTPOINT}"/syslinux/syslinux.cfg
-        fi
-        print_warning "The partition in question needs to be whatever you have as / (root), not /boot."
-        pause_function
-        $EDITOR "${MOUNTPOINT}""${EFI_MOUNTPOINT}"/syslinux/syslinux.cfg
-        break
-        ;;
-      3)
-        print_info "Your boot partition, on which you plan to install Syslinux, must contain a FAT, ext2, ext3, ext4, or Btrfs file system. You should install it on a mounted directory, not a /dev/sdXY partition. You do not have to install it on the root directory of a file system, e.g., with partition /dev/sda1 mounted on /boot you can install Syslinux in the syslinux directory"
-        echo -e "$prompt3"
-        print_warning "mkdir /boot/syslinux\nextlinux --install /boot/syslinux "
-        arch-chroot "${MOUNTPOINT}"
-        break
-        ;;
-      *)
-        invalid_option
-        ;;
-      esac
-    done
-    ;;
-  Systemd)
-    print_title "SYSTEMD-BOOT - https://wiki.archlinux.org/index.php/Systemd-boot"
-    print_info "systemd-boot (previously called gummiboot), is a simple UEFI boot manager which executes configured EFI images. The default entry is selected by a configured pattern (glob) or an on-screen menu. It is included with systemd since systemd 220-2."
-    print_warning "\tSystemd-boot heavily suggests that /boot is mounted to the EFI partition, not /boot/efi, in order to simplify updating and configuration."
-    gummiboot_install_mode=("Automatic" "Manual")
-    PS3="$prompt1"
-    echo -e "Gummiboot install:\n"
-    select OPT in "${gummiboot_install_mode[@]}"; do
-      case "$REPLY" in
-      1)
-        arch_chroot "bootctl --path=${EFI_MOUNTPOINT} install"
-        print_warning "Please check your .conf file"
-        partuuid=$(blkid -s PARTUUID "${ROOT_MOUNTPOINT}" | awk '{print $2}' | sed 's/"//g' | sed 's/^.*=//')
-        if [ "$(arch-chroot "${MOUNTPOINT}" ls /boot | grep hardened -c)" -gt "0" ]; then
-          img_name="linux-hardened"
-        elif [ "$(arch-chroot "${MOUNTPOINT}" ls /boot | grep lts -c)" -gt "0" ]; then
-          img_name="linux-lts"
-        elif [ "$(arch-chroot "${MOUNTPOINT}" ls /boot | grep zen -c)" -gt "0" ]; then
-          img_name="linux-zen"
-        else
-          img_name="linux"
-        fi
-        if [[ $LUKS -eq 1 ]]; then
-          echo -e "title\tArch Linux\nlinux\t/vmlinuz-${img_name}\ninitrd\t/initramfs-${img_name}.img\noptions\tcryptdevice=\/dev\/${LUKS_DISK}:luks root=\/dev\/mapper\/${ROOT_PART} rw" >"${MOUNTPOINT}""${EFI_MOUNTPOINT}"/loader/entries/arch.conf
-        elif [[ $LVM -eq 1 ]]; then
-          echo -e "title\tArch Linux\nlinux\t/vmlinuz-${img_name}\ninitrd\t/initramfs-${img_name}.img\noptions\troot=\/dev\/mapper\/${ROOT_PART} rw" >"${MOUNTPOINT}""${EFI_MOUNTPOINT}"/loader/entries/arch.conf
-        else
-          echo -e "title\tArch Linux\nlinux\t/vmlinuz-${img_name}\ninitrd\t/initramfs-${img_name}.img\noptions\troot=PARTUUID=${partuuid} rw" >"${MOUNTPOINT}""${EFI_MOUNTPOINT}"/loader/entries/arch.conf
-        fi
-        echo -e "default  arch\ntimeout  5" >"${MOUNTPOINT}""${EFI_MOUNTPOINT}"/loader/loader.conf
-        pause_function
-        $EDITOR "${MOUNTPOINT}""${EFI_MOUNTPOINT}"/loader/entries/arch.conf
-        $EDITOR "${MOUNTPOINT}""${EFI_MOUNTPOINT}"/loader/loader.conf
-        break
-        ;;
-      2)
-        arch-chroot "${MOUNTPOINT}"
-        break
-        ;;
-      *)
-        invalid_option
-        ;;
-      esac
-    done
     ;;
   rEFInd)
     print_title "REFIND - https://wiki.archlinux.org/index.php/REFInd"
@@ -947,6 +869,15 @@ new_user() {
   pause_function
 }
 #}}}
+#SET PACAM COLOR {{{
+set_pacman_color() {
+    sed -i "/\[multilib\]/,/Include/"'s/^#//' /etc/pacman.conf
+    sed -i "s/#Color/Color/g" /etc/pacman.conf
+    sed -i "s/#TotalDownload/TotalDownload/g" /etc/pacman.conf
+    sed -i "s/#UseSyslog/ILoveCandy/g" /etc/pacman.conf
+    pause_function
+}
+#}}}
 #FINISH {{{
 finish() {
   print_title "INSTALL COMPLETED"
@@ -967,6 +898,24 @@ check_boot_system
 check_connection
 check_trim
 pacman -Sy
+
+tput setaf 6;echo "################################################################"
+echo "Cololindo o Pacman"
+echo "################################################################"
+echo;tput sgr0
+sed -i "/\[multilib\]/,/Include/"'s/^#//' /etc/pacman.conf
+sed -i "s/#Color/Color/g" /etc/pacman.conf
+sed -i "s/#TotalDownload/TotalDownload/g" /etc/pacman.conf
+sed -i "s/#UseSyslog/ILoveCandy/g" /etc/pacman.conf
+sleep 2s
+
+tput setaf 6;echo "################################################################"
+echo "Remontando cowspace com Size=3G"
+echo "################################################################"
+echo;tput sgr0
+mount -o remount,size=3G /run/archiso/cowspace
+sleep 2s
+
 while true; do
   print_title "ARCHLINUX ULTIMATE INSTALL - https://github.com/helmuthdu/aui"
   echo " 1) $(mainmenu_item "${checklist[1]}" "Select Keymap" "${KEYMAP}")"
@@ -983,6 +932,7 @@ while true; do
   echo "12) $(mainmenu_item "${checklist[12]}" "Install Bootloader" "${bootloader}")"
   echo "13) $(mainmenu_item "${checklist[13]}" "Root Password")"
   echo "14) $(mainmenu_item "${checklist[13]}" "Add new USER")"
+  echo "15) $(mainmenu_item "${checklist[13]}" "Set color Pacman")"
   echo ""
   echo " d) Done"
   echo ""
@@ -1049,6 +999,10 @@ while true; do
       new_user
       checklist[14]=1
       ;;  
+    15)
+      set_pacman_color
+      checklist[15]=1
+      ;;    
     "d")
       finish
       ;;
