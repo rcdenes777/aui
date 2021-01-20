@@ -306,7 +306,7 @@ format_partitions() {
         partition_name=( "EFI" "root" "swap" "another")
        ;;
       2)
-        partition_name=("EFI" "subvolume_BTRfs")
+        partition_name=("EFI" "root_btrfs_@subvolumes")
        ;;
       *)
         invalid_option
@@ -325,7 +325,7 @@ format_partitions() {
         partition_name=( "root" "swap" "another")
        ;;
       2)
-        partition_name=( "subvolume_BTRfs")
+        partition_name=( "root_btrfs_@subvolumes")
        ;;
       *)
         invalid_option
@@ -468,6 +468,7 @@ format_partitions() {
         chmod 600 "${MOUNTPOINT}"/swap/swapfile
         chattr +C "${MOUNTPOINT}"/swap/swapfile
         fallocate "${MOUNTPOINT}"/swap/swapfile -l"$swap_tamanho"G
+        swap_type="Btrfs_file"
         fi
     fi    
                   
@@ -495,6 +496,7 @@ format_partitions() {
         chmod 600 "${MOUNTPOINT}"/swap/swapfile
         chattr +C "${MOUNTPOINT}"/swap/swapfile
         fallocate "${MOUNTPOINT}"/swap/swapfile -l"$swap_tamanho"G
+        swap_type="Btrfs_file"
         fi
     fi     
   }
@@ -515,12 +517,6 @@ format_partitions() {
             ROOT_MOUNTPOINT=${partition}
             format_partition "${partition}" "${MOUNTPOINT}"
             ;;
-          subvolume_BTRfs)
-            ROOT_PART=$(echo "${partition}" | sed 's/\/dev\/mapper\///' | sed 's/\/dev\///')
-            ROOT_MOUNTPOINT=${partition}
-            btrfs_format_creat_mount
-            disable_partition
-            ;;  
           EFI)
             set_efi_partition
             read_input_text "Format ${partition} partition"
@@ -562,6 +558,13 @@ format_partitions() {
     elif [[ ${partition_name[i]} == another ]]; then
       read_input_text "Configure more partitions"
       [[ $OPTION != y ]] && break
+   elif [[ ${partition_name[i]} == root_btrfs_@subvolumes ]]; then
+      ROOT_PART=$(echo "${partition}" | sed 's/\/dev\/mapper\///' | sed 's/\/dev\///')
+      ROOT_MOUNTPOINT=${partition}
+      format_partition "${partition}" "${MOUNTPOINT}"
+      btrfs_format_creat_mount
+      disable_partition
+      break   
     fi
   done
   pause_function
