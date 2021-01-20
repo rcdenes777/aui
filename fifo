@@ -874,10 +874,10 @@ new_user() {
 #}}}
 #SET PACAM COLOR {{{
 set_pacman_color() {
-    sed -i "/\[multilib\]/,/Include/"'s/^#//' /etc/pacman.conf
-    sed -i "s/#Color/Color/g" /etc/pacman.conf
-    sed -i "s/#TotalDownload/TotalDownload/g" /etc/pacman.conf
-    sed -i "s/#UseSyslog/ILoveCandy/g" /etc/pacman.conf
+    sed -i "/\[multilib\]/,/Include/"'s/^#//' "${MOUNTPOINT}"/etc/pacman.conf
+    sed -i "s/#Color/Color/g" "${MOUNTPOINT}"/etc/pacman.conf
+    sed -i "s/#TotalDownload/TotalDownload/g" "${MOUNTPOINT}"/etc/pacman.conf
+    sed -i "s/#UseSyslog/ILoveCandy/g" "${MOUNTPOINT}"/etc/pacman.conf
     pause_function
 }
 #}}}
