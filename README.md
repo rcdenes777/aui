@@ -66,11 +66,11 @@ Execute o script
 ## Se for SSD recebera as flags:
 - mount -o noatime,autodefrag,ssd,ssd_spread,compress=zstd,space_cache,subvol=
 ## Se for HD mecânico recebera as flags:
-- mount -o noatime,autodefrag,nossd,compress=zstd,space_cache,subvol=
+- mount -o noatime,autodefrag,compress=zstd,space_cache,subvol=
 ## Sera perguntado se quer criar um Swap_File se sim, perguntara o tamanho em Giga e recebera as flags:
 - mount -o defaults,noatime,,ssd,ssd_spread,subvol=@swap
 - Ou...
-- mount -o defaults,noatime,nossd,subvol=@swap
+- mount -o defaults,noatime,subvol=@swap
 
 
 ## Features
