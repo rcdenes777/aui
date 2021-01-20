@@ -25,7 +25,7 @@ efibootmgr dosfstools
 
 De boot na iso do Archlinux
 
-Obtenha a lista de pacotes e instale git: pacman -Sy git
+Obtenha a lista de pacotes e instale git: pacman -Syu git
 
 Obtenha o script: git clone git://github.com/rcdenes777/aui
 
