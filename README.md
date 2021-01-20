@@ -32,7 +32,7 @@ ATENÇAO >>> SOMENTE PARA TESTES
 
 ## Instale o Git
 ### Clone script
-- Obtenha a lista de pacotes e instale git: `pacman -Sy git`
+- Obtenha a lista de pacotes e instale git: `pacman -Syu git`
 - Obtenha o script: `git clone git://github.com/rcdenes777/aui `
  
 
