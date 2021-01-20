@@ -490,7 +490,7 @@ format_partitions() {
         if [[ $OPTION == y ]]; then
         printf "%s" "Digite o tamanha do Swap_file: (EX: 4), sera de 4Giga]: " 
         read -r swap_tamanho
-        mount -o defaults,noatime,,ssd,ssd_spread,subvol=@swap "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/swap
+        mount -o defaults,noatime,,nossd,subvol=@swap "${ROOT_MOUNTPOINT}" "${MOUNTPOINT}"/swap
         touch "${MOUNTPOINT}"/swap/swapfile
         chmod 600 "${MOUNTPOINT}"/swap/swapfile
         chattr +C "${MOUNTPOINT}"/swap/swapfile
